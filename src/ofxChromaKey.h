@@ -11,4 +11,5 @@ public:
     ofShader shader;
     ofColor keyColor;
     float threshold;
+	float gamma;
 };

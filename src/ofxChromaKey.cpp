@@ -3,6 +3,7 @@
 ofxChromaKey::ofxChromaKey(){
     keyColor = ofColor(0, 255, 0);
     threshold = 0.1;
+	float gamma = 1.0;
     string vertex;
     string fragment;
     
@@ -24,6 +25,7 @@ ofxChromaKey::ofxChromaKey(){
         #version 150
         uniform sampler2DRect tex0;
         uniform float threshold;
+		uniform float gamma;
         uniform vec3 chromaKeyColor;
         in vec2 texCoordVarying;
         out vec4 outputColor;
@@ -32,7 +34,7 @@ ofxChromaKey::ofxChromaKey(){
             vec4 texel0 = texture(tex0, texCoordVarying);
             float diff = length(chromaKeyColor - texel0.rgb);
             if(diff < threshold){
-                discard;
+                outputColor = vec4(texel0.rgb, pow(diff / threshold, gamma));
             }else{
                 outputColor = texel0;
             }
@@ -53,6 +55,7 @@ ofxChromaKey::ofxChromaKey(){
         #version 120
         uniform sampler2DRect tex0;
         uniform float threshold;
+		uniform float gamma;
         uniform vec3 chromaKeyColor;
         varying vec2 texCoordVarying;
         void main()
@@ -60,7 +63,7 @@ ofxChromaKey::ofxChromaKey(){
             vec4 texel0 = texture2DRect(tex0, texCoordVarying);
             float diff = length(chromaKeyColor - texel0.rgb);
             if(diff < threshold){
-                discard;
+                gl_FragColor = vec4(texel0.rgb, pow(diff / threshold, gamma));
             }else{
                 gl_FragColor = texel0;
             }
@@ -78,6 +81,8 @@ void ofxChromaKey::begin(){
     shader.begin();
     shader.setUniform3f("chromaKeyColor", ofVec3f(keyColor.r/255.0, keyColor.g/255.0, keyColor.b/255.0));
     shader.setUniform1f("threshold", threshold);
+	shader.setUniform1f("gamma", gamma);
+
 }
 
 void ofxChromaKey::end(){
