@@ -56,21 +56,56 @@ ofxChromaKey::ofxChromaKey(){
         uniform sampler2DRect tex0;
         uniform float threshold;
 		uniform float gamma;
+		uniform bool useHSV;
+		uniform vec3 hsvRange;
         uniform vec3 chromaKeyColor;
         varying vec2 texCoordVarying;
-        void main()
+
+		vec3 rgb2hsv(vec3 c){
+			vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+			vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+			vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+			float d = q.x - min(q.w, q.y);
+			float e = 1.0e-10;
+			return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+		}
+
+		void main()
         {
             vec4 texel0 = texture2DRect(tex0, texCoordVarying);
-            float diff = length(chromaKeyColor - texel0.rgb);
-            if(diff < threshold){
-                gl_FragColor = vec4(texel0.rgb, pow(diff / threshold, gamma));
-            }else{
-                gl_FragColor = texel0;
-            }
+
+			if(useHSV){
+				vec3 hsvTexel = rgb2hsv(texel0.rgb);
+				vec3 hsvKey = rgb2hsv(chromaKeyColor.rgb);
+				//float diff = length(hsvKey - hsvTexel);
+				float diffHue = min(abs(hsvKey.r - hsvTexel.r), 1 - abs(hsvKey.r - hsvTexel.r)) / 0.5;
+				float diffSat = abs(hsvKey.g - hsvTexel.g);
+				float diffVal = abs(hsvKey.b - hsvTexel.b);
+
+				float diff = (diffHue * hsvRange.r + diffSat * hsvRange.g + diffVal * hsvRange.b) / (hsvRange.r + hsvRange.g + hsvRange.b);
+				//float diff = diffHue;
+
+				if(diff < threshold){
+					gl_FragColor = vec4(texel0.rgb, pow(diff / threshold, gamma));
+				}else{
+					gl_FragColor = texel0;
+				}
+
+				//gl_FragColor = vec4(diffHue, diffHue, diffHue, 1.0);
+
+			}else{
+				float diff = length(chromaKeyColor - texel0.rgb);
+				if(diff < threshold){
+					gl_FragColor = vec4(texel0.rgb, pow(diff / threshold, gamma));
+				}else{
+					gl_FragColor = texel0;
+				}
+			}
         }
         )GLSL";
     }
-    
+
     shader.setupShaderFromSource(GL_VERTEX_SHADER, vertex);
     shader.setupShaderFromSource(GL_FRAGMENT_SHADER, fragment);
     shader.bindDefaults();
@@ -82,6 +117,8 @@ void ofxChromaKey::begin(){
     shader.setUniform3f("chromaKeyColor", ofVec3f(keyColor.r/255.0, keyColor.g/255.0, keyColor.b/255.0));
     shader.setUniform1f("threshold", threshold);
 	shader.setUniform1f("gamma", gamma);
+	shader.setUniform3f("hsvRange", ofVec3f(hueRange, satRange, valRange));
+	shader.setUniform1i("useHSV", useHSV);
 
 }
 

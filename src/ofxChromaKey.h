@@ -12,4 +12,8 @@ public:
     ofColor keyColor;
     float threshold;
 	float gamma;
+	float hueRange = 0.5;
+	float satRange = 0.5;
+	float valRange = 0.5;
+	bool useHSV;
 };
